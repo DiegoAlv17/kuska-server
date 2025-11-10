@@ -5,6 +5,9 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import type { Request, Response } from 'express';
 import authRoutes from './auth/infrastructure/routes/authRoutes';
+import projectRoutes from './projects/infrastructure/routes/projectRoutes';
+import taskRoutes from './task/infrastructure/routes/taskRoutes';
+import teamRoutes from './tems/infrastructure/routes/teamRoutes';
 import { errorHandler } from './shared/infrastructure/middlewares/errorHandler';
 
 const app = express();
@@ -35,6 +38,9 @@ app.get('/', (req: Request, res: Response) => {
 
 // Rutas de la API
 app.use('/api/auth', authRoutes);
+app.use('/api/projects', projectRoutes);
+app.use('/api/tasks', taskRoutes);
+app.use('/api/teams', teamRoutes);
 
 // Middleware de manejo de errores
 app.use(errorHandler);
