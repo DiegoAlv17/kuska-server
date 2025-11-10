@@ -35,6 +35,7 @@ export class RegisterUserUseCase {
       email: new Email(dto.email),
       password: new Password(hashedPassword, true), // true = ya está hasheada
       completeName: dto.completeName,
+      phone: dto.phone,
       timezone: 'UTC',
       locale: 'es',
       isActive: true,
