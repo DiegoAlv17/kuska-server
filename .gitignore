@@ -8,6 +8,9 @@ dist/
 .env
 .env.local
 
+claude/
+docs/
+
 # VSCode
 .vscode/
 
@@ -27,3 +30,5 @@ package-lock.json
 
 # Temp
 .tmp/
+
+/src/generated/prisma
