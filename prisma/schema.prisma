@@ -31,7 +31,9 @@ model User {
   updatedAt     DateTime  @updatedAt
 
   // Relations
-  userRoles     UserRole[]
+  userRoles        UserRole[]
+  projectsCreated  Project[]        @relation("ProjectCreator")
+  projectMembers   ProjectMember[]
 
   @@map("users")
 }
@@ -63,4 +65,60 @@ model UserRole {
 
   @@unique([userId, roleId, organizationId])
   @@map("user_roles")
+}
+
+// ============================================
+// Projects Module Models
+// ============================================
+
+enum ProjectStatus {
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+  ON_HOLD
+}
+
+enum ProjectRole {
+  ADMIN
+  MEMBER
+  READER
+}
+
+enum TemplateType {
+  SCRUM
+  KANBAN
+  SIMPLE
+}
+
+model Project {
+  id          String        @id @default(uuid())
+  name        String
+  description String?
+  code        String        @unique
+  status      ProjectStatus @default(ACTIVE)
+  type        TemplateType  @default(SIMPLE)
+  createdById String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // Relations
+  createdBy User            @relation("ProjectCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  members   ProjectMember[]
+
+  @@map("projects")
+}
+
+model ProjectMember {
+  id        String      @id @default(uuid())
+  projectId String
+  userId    String
+  role      ProjectRole @default(MEMBER)
+  addedAt   DateTime    @default(now())
+
+  // Relations
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@map("project_members")
 }

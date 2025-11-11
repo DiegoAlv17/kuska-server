@@ -1,67 +1,266 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
+import { CreateProjectSchema } from '../../application/dtos/CreateProjectDto';
+import { AddProjectMemberSchema } from '../../application/dtos/AddProjectMemberDto';
+import { UpdateProjectSchema } from '../../application/dtos/UpdateProjectDto';
+import { UpdateMemberRoleSchema } from '../../application/dtos/UpdateMemberRoleDto';
+import { CreateProjectUseCase } from '../../application/use-cases/CreateProjectUseCase';
+import { AddProjectMemberUseCase } from '../../application/use-cases/AddProjectMemberUseCase';
+import { GetProjectUseCase } from '../../application/use-cases/GetProjectUseCase';
+import { ListUserProjectsUseCase } from '../../application/use-cases/ListUserProjectsUseCase';
+import { UpdateProjectUseCase } from '../../application/use-cases/UpdateProjectUseCase';
+import { DeleteProjectUseCase } from '../../application/use-cases/DeleteProjectUseCase';
+import { UpdateMemberRoleUseCase } from '../../application/use-cases/UpdateMemberRoleUseCase';
+import { RemoveMemberUseCase } from '../../application/use-cases/RemoveMemberUseCase';
+import { PrismaProjectRepository } from '../repositories/PrismaProjectRepository';
+import { PrismaProjectMemberRepository } from '../repositories/PrismaProjectMemberRepository';
+import { PrismaUserRepository } from '../../../auth/infrastructure/repositories/PrismaUserRepository';
 
 export class ProjectController {
-  // Placeholder: Listar proyectos
-  getProjects = async (req: Request, res: Response): Promise<void> => {
-    res.status(200).json({
-      success: true,
-      message: 'Get projects - Coming soon',
-      data: {
-        projects: [],
-        user: req.user,
-      },
-    });
+  private createProjectUseCase: CreateProjectUseCase;
+  private addProjectMemberUseCase: AddProjectMemberUseCase;
+  private getProjectUseCase: GetProjectUseCase;
+  private listUserProjectsUseCase: ListUserProjectsUseCase;
+  private updateProjectUseCase: UpdateProjectUseCase;
+  private deleteProjectUseCase: DeleteProjectUseCase;
+  private updateMemberRoleUseCase: UpdateMemberRoleUseCase;
+  private removeMemberUseCase: RemoveMemberUseCase;
+
+  constructor() {
+    const projectRepository = new PrismaProjectRepository();
+    const projectMemberRepository = new PrismaProjectMemberRepository();
+    const userRepository = new PrismaUserRepository();
+
+    this.createProjectUseCase = new CreateProjectUseCase(
+      projectRepository,
+      projectMemberRepository
+    );
+
+    this.addProjectMemberUseCase = new AddProjectMemberUseCase(
+      projectRepository,
+      projectMemberRepository,
+      userRepository
+    );
+
+    this.getProjectUseCase = new GetProjectUseCase(projectRepository, projectMemberRepository);
+
+    this.listUserProjectsUseCase = new ListUserProjectsUseCase(projectRepository);
+
+    this.updateProjectUseCase = new UpdateProjectUseCase(
+      projectRepository,
+      projectMemberRepository
+    );
+
+    this.deleteProjectUseCase = new DeleteProjectUseCase(
+      projectRepository,
+      projectMemberRepository
+    );
+
+    this.updateMemberRoleUseCase = new UpdateMemberRoleUseCase(
+      projectRepository,
+      projectMemberRepository
+    );
+
+    this.removeMemberUseCase = new RemoveMemberUseCase(
+      projectRepository,
+      projectMemberRepository
+    );
+  }
+
+  createProject = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          message: 'User not authenticated',
+        });
+        return;
+      }
+
+      const validatedData = CreateProjectSchema.parse(req.body);
+      const result = await this.createProjectUseCase.execute(validatedData, req.user.userId);
+
+      res.status(201).json({
+        success: true,
+        message: 'Project created successfully',
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
   };
 
-  // Placeholder: Obtener un proyecto por ID
-  getProjectById = async (req: Request, res: Response): Promise<void> => {
-    const { id } = req.params;
-    res.status(200).json({
-      success: true,
-      message: `Get project ${id} - Coming soon`,
-      data: {
-        projectId: id,
-        user: req.user,
-      },
-    });
+  addMember = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          message: 'User not authenticated',
+        });
+        return;
+      }
+
+      const { projectId } = req.params;
+      const validatedData = AddProjectMemberSchema.parse(req.body);
+
+      const result = await this.addProjectMemberUseCase.execute(
+        projectId,
+        validatedData,
+        req.user.userId
+      );
+
+      res.status(201).json({
+        success: true,
+        message: 'Member added successfully',
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
   };
 
-  // Placeholder: Crear proyecto
-  createProject = async (req: Request, res: Response): Promise<void> => {
-    res.status(201).json({
-      success: true,
-      message: 'Create project - Coming soon',
-      data: {
-        body: req.body,
-        user: req.user,
-      },
-    });
+  getProject = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          message: 'User not authenticated',
+        });
+        return;
+      }
+
+      const { projectId } = req.params;
+      const result = await this.getProjectUseCase.execute(projectId, req.user.userId);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
   };
 
-  // Placeholder: Actualizar proyecto
-  updateProject = async (req: Request, res: Response): Promise<void> => {
-    const { id } = req.params;
-    res.status(200).json({
-      success: true,
-      message: `Update project ${id} - Coming soon`,
-      data: {
-        projectId: id,
-        body: req.body,
-        user: req.user,
-      },
-    });
+  listProjects = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          message: 'User not authenticated',
+        });
+        return;
+      }
+
+      const result = await this.listUserProjectsUseCase.execute(req.user.userId);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
   };
 
-  // Placeholder: Eliminar proyecto
-  deleteProject = async (req: Request, res: Response): Promise<void> => {
-    const { id } = req.params;
-    res.status(200).json({
-      success: true,
-      message: `Delete project ${id} - Coming soon`,
-      data: {
-        projectId: id,
-        user: req.user,
-      },
-    });
+  updateProject = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          message: 'User not authenticated',
+        });
+        return;
+      }
+
+      const { projectId } = req.params;
+      const validatedData = UpdateProjectSchema.parse(req.body);
+
+      const result = await this.updateProjectUseCase.execute(
+        projectId,
+        validatedData,
+        req.user.userId
+      );
+
+      res.status(200).json({
+        success: true,
+        message: 'Project updated successfully',
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  deleteProject = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          message: 'User not authenticated',
+        });
+        return;
+      }
+
+      const { projectId } = req.params;
+      await this.deleteProjectUseCase.execute(projectId, req.user.userId);
+
+      res.status(200).json({
+        success: true,
+        message: 'Project deleted successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  updateMemberRole = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          message: 'User not authenticated',
+        });
+        return;
+      }
+
+      const { projectId, memberId } = req.params;
+      const validatedData = UpdateMemberRoleSchema.parse(req.body);
+
+      const result = await this.updateMemberRoleUseCase.execute(
+        projectId,
+        memberId,
+        validatedData,
+        req.user.userId
+      );
+
+      res.status(200).json({
+        success: true,
+        message: 'Member role updated successfully',
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  removeMember = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          message: 'User not authenticated',
+        });
+        return;
+      }
+
+      const { projectId, memberId } = req.params;
+      await this.removeMemberUseCase.execute(projectId, memberId, req.user.userId);
+
+      res.status(200).json({
+        success: true,
+        message: 'Member removed successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
   };
 }

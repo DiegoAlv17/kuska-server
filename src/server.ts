@@ -1,6 +1,8 @@
 import 'dotenv/config';
 import './shared/types'; // Importar tipos extendidos de Express
 import express from 'express';
+import path from 'path';
+import swaggerUi from 'swagger-ui-express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import type { Request, Response } from 'express';
@@ -41,6 +43,17 @@ app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/teams', teamRoutes);
+
+// Swagger UI (OpenAPI)
+try {
+  const openapiPath = path.join(__dirname, '..', 'docs', 'openapi.json');
+  // If running with ts-node the __dirname may point to src; try also src/docs
+  const openapiDoc = require(openapiPath);
+  app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(openapiDoc));
+} catch (e) {
+  // If docs not found or swagger not installed, skip serving docs
+  // console.warn('Swagger UI not mounted:', e.message);
+}
 
 // Middleware de manejo de errores
 app.use(errorHandler);

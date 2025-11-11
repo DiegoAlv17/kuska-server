@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { ProjectController } from '../controllers/ProjectController';
 import { authMiddleware } from '../../../auth/infrastructure/middlewares/authMiddleware';
-import { requireRole } from '../../../auth/infrastructure/middlewares/requireRole';
 
 const router = Router();
 const projectController = new ProjectController();
@@ -10,17 +9,15 @@ const projectController = new ProjectController();
 router.use(authMiddleware);
 
 // Rutas de proyectos
-router.get('/', projectController.getProjects);
-router.get('/:id', projectController.getProjectById);
+router.get('/', projectController.listProjects); // Listar proyectos del usuario
+router.post('/', projectController.createProject); // Crear proyecto (cualquier usuario autenticado)
+router.get('/:projectId', projectController.getProject); // Obtener proyecto (solo miembros)
+router.patch('/:projectId', projectController.updateProject); // Actualizar proyecto (solo admins)
+router.delete('/:projectId', projectController.deleteProject); // Eliminar proyecto (solo admins)
 
-// Solo usuarios con rol ADMIN o PROJECT_MANAGER pueden crear proyectos
-router.post('/', requireRole('ADMIN', 'PROJECT_MANAGER'), projectController.createProject);
-
-// Solo usuarios con rol ADMIN o PROJECT_MANAGER pueden actualizar
-router.put('/:id', requireRole('ADMIN', 'PROJECT_MANAGER'), projectController.updateProject);
-router.patch('/:id', requireRole('ADMIN', 'PROJECT_MANAGER'), projectController.updateProject);
-
-// Solo ADMIN puede eliminar proyectos
-router.delete('/:id', requireRole('ADMIN'), projectController.deleteProject);
+// Rutas de miembros
+router.post('/:projectId/members', projectController.addMember); // Agregar miembro (solo admins)
+router.patch('/:projectId/members/:memberId', projectController.updateMemberRole); // Cambiar rol (solo admins)
+router.delete('/:projectId/members/:memberId', projectController.removeMember); // Remover miembro (solo admins)
 
 export default router;
