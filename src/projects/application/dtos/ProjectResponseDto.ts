@@ -18,6 +18,20 @@ export interface ProjectResponseDto {
   createdByEmail: string;
   createdByName: string;
   members?: ProjectMemberResponseDto[];
+  template?: {
+    id: string;
+    name: string;
+    description?: string;
+    category?: string;
+    industry?: string;
+    complexity: string;
+    content: Record<string, any>;
+    templateType: string;
+    isPublic: boolean;
+    usageCount: number;
+    createdAt: Date;
+    updatedAt: Date;
+  };
   createdAt: Date;
   updatedAt: Date;
 }

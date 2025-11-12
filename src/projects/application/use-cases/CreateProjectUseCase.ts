@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { IProjectRepository } from '../../domain/repositories/IProjectRepository';
 import { IProjectMemberRepository } from '../../domain/repositories/IProjectMemberRepository';
+import { ITemplateRepository } from '../../../templates/domain/repositories/ITemplateRepository';
 import { Project } from '../../domain/entities/Project';
 import { ProjectMember } from '../../domain/entities/ProjectMember';
 import { ProjectCode } from '../../domain/value-objects/ProjectCode';
@@ -13,7 +14,8 @@ import { ProjectResponseDto } from '../dtos/ProjectResponseDto';
 export class CreateProjectUseCase {
   constructor(
     private readonly projectRepository: IProjectRepository,
-    private readonly projectMemberRepository: IProjectMemberRepository
+    private readonly projectMemberRepository: IProjectMemberRepository,
+    private readonly templateRepository?: ITemplateRepository
   ) {}
 
   async execute(dto: CreateProjectDto, userId: string): Promise<ProjectResponseDto> {
@@ -64,7 +66,7 @@ export class CreateProjectUseCase {
 
     const members = await this.projectMemberRepository.findByProject(projectId);
 
-    // Obtener información de usuarios (esto se debe hacer con el userRepository, simplificado aquí)
+    // Obtener información de usuarios y template
     const prisma = require('../../../auth/infrastructure/persistence/PrismaClient').prisma;
     const projectData = await prisma.project.findUnique({
       where: { id: projectId },
@@ -75,8 +77,33 @@ export class CreateProjectUseCase {
             user: true,
           },
         },
+        template: true, // Incluir template si existe
       },
     });
+
+    // Obtener template por defecto si no hay template asociado
+    let templateData = projectData.template;
+    if (!templateData && this.templateRepository) {
+      // Buscar template por defecto (primera plantilla pública del tipo correspondiente)
+      const publicTemplates = await this.templateRepository.findPublicTemplates();
+      const defaultTemplate = publicTemplates.find(t => t.getTemplateType() === project.getType());
+      if (defaultTemplate) {
+        templateData = {
+          id: defaultTemplate.getId(),
+          name: defaultTemplate.getName(),
+          description: defaultTemplate.getDescription(),
+          category: defaultTemplate.getCategory(),
+          industry: defaultTemplate.getIndustry(),
+          complexity: defaultTemplate.getComplexity(),
+          content: defaultTemplate.getContent(),
+          templateType: defaultTemplate.getTemplateType(),
+          isPublic: defaultTemplate.isPublicTemplate(),
+          usageCount: defaultTemplate.getUsageCount(),
+          createdAt: defaultTemplate.getCreatedAt(),
+          updatedAt: defaultTemplate.getUpdatedAt(),
+        };
+      }
+    }
 
     return {
       id: project.getId(),
@@ -96,6 +123,20 @@ export class CreateProjectUseCase {
         role: m.role,
         addedAt: m.addedAt,
       })),
+      template: templateData ? {
+        id: templateData.id,
+        name: templateData.name,
+        description: templateData.description,
+        category: templateData.category,
+        industry: templateData.industry,
+        complexity: templateData.complexity,
+        content: templateData.content,
+        templateType: templateData.templateType || templateData.type,
+        isPublic: templateData.isPublic,
+        usageCount: templateData.usageCount,
+        createdAt: templateData.createdAt,
+        updatedAt: templateData.updatedAt,
+      } : undefined,
       createdAt: project.getCreatedAt(),
       updatedAt: project.getUpdatedAt(),
     };

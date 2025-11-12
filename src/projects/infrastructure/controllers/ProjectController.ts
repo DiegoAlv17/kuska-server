@@ -32,11 +32,12 @@ export class ProjectController {
     const projectRepository = new PrismaProjectRepository();
     const projectMemberRepository = new PrismaProjectMemberRepository();
     const userRepository = new PrismaUserRepository();
-  const templateRepository = new PrismaTemplateRepository(); // ✅ NUEVO
+    const templateRepository = new PrismaTemplateRepository(); // ✅ NUEVO
 
     this.createProjectUseCase = new CreateProjectUseCase(
       projectRepository,
-      projectMemberRepository
+      projectMemberRepository,
+      templateRepository // ✅ PASAR TEMPLATE REPOSITORY
     );
 
     // ✅ NUEVO: Use Case para crear proyecto desde template
@@ -52,7 +53,7 @@ export class ProjectController {
       userRepository
     );
 
-    this.getProjectUseCase = new GetProjectUseCase(projectRepository, projectMemberRepository);
+    this.getProjectUseCase = new GetProjectUseCase(projectRepository, projectMemberRepository, templateRepository);
 
     this.listUserProjectsUseCase = new ListUserProjectsUseCase(projectRepository);
 
