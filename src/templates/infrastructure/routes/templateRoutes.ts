@@ -16,5 +16,6 @@ router.post('/', templateController.createTemplate);        // Crear template
 router.get('/:templateId', templateController.getTemplate); // Obtener template específico
 router.patch('/:templateId', templateController.updateTemplate); // Actualizar template (solo creador)
 router.delete('/:templateId', templateController.deleteTemplate); // Eliminar template (solo creador)
+router.patch('/:templateId/usage', templateController.incrementTemplateUsage); // ✅ NUEVO: Incrementar uso de template
 
 export default router;

@@ -8,6 +8,9 @@ const projectController = new ProjectController();
 // Todas las rutas requieren autenticación
 router.use(authMiddleware);
 
+// ✅ NUEVA RUTA: Crear proyecto desde template
+router.post('/from-template/:templateId', projectController.createFromTemplate);
+
 // Rutas de proyectos
 router.get('/', projectController.listProjects); // Listar proyectos del usuario
 router.post('/', projectController.createProject); // Crear proyecto (cualquier usuario autenticado)

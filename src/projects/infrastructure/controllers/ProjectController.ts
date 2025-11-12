@@ -4,6 +4,7 @@ import { AddProjectMemberSchema } from '../../application/dtos/AddProjectMemberD
 import { UpdateProjectSchema } from '../../application/dtos/UpdateProjectDto';
 import { UpdateMemberRoleSchema } from '../../application/dtos/UpdateMemberRoleDto';
 import { CreateProjectUseCase } from '../../application/use-cases/CreateProjectUseCase';
+import { CreateProjectFromTemplateUseCase } from '../../application/use-cases/CreateProjectFromTemplateUseCase'; // ✅ NUEVO
 import { AddProjectMemberUseCase } from '../../application/use-cases/AddProjectMemberUseCase';
 import { GetProjectUseCase } from '../../application/use-cases/GetProjectUseCase';
 import { ListUserProjectsUseCase } from '../../application/use-cases/ListUserProjectsUseCase';
@@ -14,9 +15,11 @@ import { RemoveMemberUseCase } from '../../application/use-cases/RemoveMemberUse
 import { PrismaProjectRepository } from '../repositories/PrismaProjectRepository';
 import { PrismaProjectMemberRepository } from '../repositories/PrismaProjectMemberRepository';
 import { PrismaUserRepository } from '../../../auth/infrastructure/repositories/PrismaUserRepository';
+import { PrismaTemplateRepository } from '../../../templates/infrastructure/repositories/PrismaTemplateRepository'; // ✅ NUEVO
 
 export class ProjectController {
   private createProjectUseCase: CreateProjectUseCase;
+  private createProjectFromTemplateUseCase: CreateProjectFromTemplateUseCase; // ✅ NUEVO
   private addProjectMemberUseCase: AddProjectMemberUseCase;
   private getProjectUseCase: GetProjectUseCase;
   private listUserProjectsUseCase: ListUserProjectsUseCase;
@@ -29,10 +32,18 @@ export class ProjectController {
     const projectRepository = new PrismaProjectRepository();
     const projectMemberRepository = new PrismaProjectMemberRepository();
     const userRepository = new PrismaUserRepository();
+  const templateRepository = new PrismaTemplateRepository(); // ✅ NUEVO
 
     this.createProjectUseCase = new CreateProjectUseCase(
       projectRepository,
       projectMemberRepository
+    );
+
+    // ✅ NUEVO: Use Case para crear proyecto desde template
+    this.createProjectFromTemplateUseCase = new CreateProjectFromTemplateUseCase(
+      projectRepository,
+      projectMemberRepository,
+      templateRepository
     );
 
     this.addProjectMemberUseCase = new AddProjectMemberUseCase(
@@ -89,6 +100,44 @@ export class ProjectController {
         success: true,
         message: 'Project created successfully',
         data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  // ✅ NUEVO MÉTODO: Crear proyecto desde template
+  createFromTemplate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          message: 'User not authenticated',
+        });
+        return;
+      }
+
+      const { templateId } = req.params;
+      const { name } = req.body;
+
+      if (!name || !name.trim()) {
+        res.status(400).json({
+          success: false,
+          message: 'Project name is required',
+        });
+        return;
+      }
+
+      const project = await this.createProjectFromTemplateUseCase.execute(
+        templateId,
+        name.trim(),
+        req.user.userId
+      );
+
+      res.status(201).json({
+        success: true,
+        message: 'Project created successfully from template',
+        data: project,
       });
     } catch (error) {
       next(error);

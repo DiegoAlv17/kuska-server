@@ -9,6 +9,7 @@ export interface ProjectProps {
   code: ProjectCode;
   status: ProjectStatusVO;
   type: TemplateType;
+  templateId?: string | null;
   createdById: string;
   createdAt: Date;
   updatedAt: Date;
@@ -21,6 +22,7 @@ export class Project {
   private code: ProjectCode;
   private status: ProjectStatusVO;
   private type: TemplateType;
+  private templateId?: string | null;
   private readonly createdById: string;
   private readonly createdAt: Date;
   private updatedAt: Date;
@@ -32,6 +34,7 @@ export class Project {
     this.code = props.code;
     this.status = props.status;
     this.type = props.type;
+    this.templateId = props.templateId;
     this.createdById = props.createdById;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
@@ -60,6 +63,10 @@ export class Project {
 
   getType(): TemplateType {
     return this.type;
+  }
+
+  getTemplateId(): string | null | undefined {
+    return this.templateId;
   }
 
   getCreatedById(): string {

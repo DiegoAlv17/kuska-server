@@ -16,6 +16,7 @@ export class PrismaProjectRepository implements IProjectRepository {
         code: project.getCode().getValue(),
         status: project.getStatus().getValue(),
         type: project.getType(),
+        templateId: project.getTemplateId() ?? null,
         createdById: project.getCreatedById(),
         createdAt: project.getCreatedAt(),
         updatedAt: project.getUpdatedAt(),
@@ -100,6 +101,8 @@ export class PrismaProjectRepository implements IProjectRepository {
       data: {
         name: project.getName(),
         description: project.getDescription(),
+        // allow updating templateId if present on the domain object
+        templateId: project.getTemplateId() ?? undefined,
         status: project.getStatus().getValue(),
         updatedAt: project.getUpdatedAt(),
       },
@@ -125,6 +128,7 @@ export class PrismaProjectRepository implements IProjectRepository {
       code: new ProjectCode(prismaProject.code),
       status: new ProjectStatusVO(prismaProject.status as ProjectStatus),
       type: prismaProject.type as TemplateType,
+      templateId: prismaProject.templateId ?? null,
       createdById: prismaProject.createdById,
       createdAt: prismaProject.createdAt,
       updatedAt: prismaProject.updatedAt,

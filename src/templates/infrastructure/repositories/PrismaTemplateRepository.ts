@@ -1,11 +1,12 @@
 // src/templates/infrastructure/repositories/PrismaTemplateRepository.ts
-
 import { prisma } from '../../../auth/infrastructure/persistence/PrismaClient';
-import { ITemplateRepository } from '../../domain/repositories/ITemplateRepository';
+import { ITemplateRepository, TemplateWithCreator } from '../../domain/repositories/ITemplateRepository';
 import { Template } from '../../domain/entities/Template';
-import { TemplateComplexity } from '../../domain/value-objects/TemplateEnums';
+// ✅ Usar enums de Prisma Client directamente
+import { TemplateComplexity, TemplateCategory, TemplateIndustry, TemplateType } from '@prisma/client';
 
 export class PrismaTemplateRepository implements ITemplateRepository {
+
   async create(template: Template): Promise<Template> {
     const prismaTemplate = await prisma.template.create({
       data: {
@@ -15,7 +16,9 @@ export class PrismaTemplateRepository implements ITemplateRepository {
         category: template.getCategory(),
         industry: template.getIndustry(),
         complexity: template.getComplexity(),
-        content: template.getContent(),
+        // Cast domain enums/json to Prisma compatible types
+        templateType: template.getTemplateType() as unknown as TemplateType,
+        content: template.getContent() as unknown as any,
         isPublic: template.isPublicTemplate(),
         usageCount: template.getUsageCount(),
         rating: template.getRating(),
@@ -57,7 +60,7 @@ export class PrismaTemplateRepository implements ITemplateRepository {
     return prismaTemplates.map((t) => this.toDomain(t));
   }
 
-  async findByCategory(category: string): Promise<Template[]> {
+  async findByCategory(category: TemplateCategory): Promise<Template[]> {
     const prismaTemplates = await prisma.template.findMany({
       where: {
         category,
@@ -86,7 +89,8 @@ export class PrismaTemplateRepository implements ITemplateRepository {
         category: template.getCategory(),
         industry: template.getIndustry(),
         complexity: template.getComplexity(),
-        content: template.getContent(),
+        templateType: template.getTemplateType() as unknown as TemplateType,
+        content: template.getContent() as unknown as any,
         isPublic: template.isPublicTemplate(),
         rating: template.getRating(),
         updatedAt: template.getUpdatedAt(),
@@ -114,14 +118,27 @@ export class PrismaTemplateRepository implements ITemplateRepository {
   }
 
   private toDomain(prismaTemplate: any): Template {
+    // Ensure JSON coming from DB is treated as domain TemplateContent
+    const content = prismaTemplate.content as unknown as import('../../domain/value-objects/TemplateTypes').TemplateContent;
+
+    // Backwards compatibility: if a stored SCRUM template misses dailyScrum, add a safe default
+    if (prismaTemplate.templateType === 'SCRUM' && content?.type === 'SCRUM') {
+      // ensure ceremonies.dailyScrum exists
+      if (!content.ceremonies) content.ceremonies = {} as any;
+      if (!content.ceremonies.dailyScrum) {
+        content.ceremonies.dailyScrum = { durationMinutes: 15, description: 'Daily standup' } as any;
+      }
+    }
+
     return new Template({
       id: prismaTemplate.id,
       name: prismaTemplate.name,
       description: prismaTemplate.description,
       category: prismaTemplate.category,
       industry: prismaTemplate.industry,
-      complexity: prismaTemplate.complexity as TemplateComplexity,
-      content: prismaTemplate.content as Record<string, any>,
+      complexity: prismaTemplate.complexity,
+      templateType: prismaTemplate.templateType as unknown as import('../../domain/value-objects/TemplateTypes').TemplateType,
+      content,
       isPublic: prismaTemplate.isPublic,
       usageCount: prismaTemplate.usageCount,
       rating: prismaTemplate.rating ? parseFloat(prismaTemplate.rating.toString()) : undefined,
@@ -129,5 +146,121 @@ export class PrismaTemplateRepository implements ITemplateRepository {
       createdAt: prismaTemplate.createdAt,
       updatedAt: prismaTemplate.updatedAt,
     });
+  }
+
+  // 🆕 MÉTODOS CON CREATOR
+  async createWithCreator(template: Template): Promise<TemplateWithCreator> {
+    console.log('Guardando template en BD:', template.getId());
+    const prismaTemplate: any = await prisma.template.create({
+      data: {
+        id: template.getId(),
+        name: template.getName(),
+        description: template.getDescription(),
+        category: template.getCategory(),
+        industry: template.getIndustry(),
+        complexity: template.getComplexity(),
+        templateType: template.getTemplateType() as unknown as TemplateType,
+        content: template.getContent() as unknown as any,
+        isPublic: template.isPublicTemplate(),
+        usageCount: template.getUsageCount(),
+        rating: template.getRating(),
+        createdById: template.getCreatedById(),
+        createdAt: template.getCreatedAt(),
+        updatedAt: template.getUpdatedAt(),
+      },
+      include: { createdBy: true },
+    });
+    console.log('Template guardado:', prismaTemplate.id);
+
+    return {
+      template: this.toDomain(prismaTemplate),
+      creator: {
+        email: (prismaTemplate.createdBy as any)?.email,
+        name: (prismaTemplate.createdBy as any)?.completeName,
+      }
+    };
+  }
+
+  async findByIdWithCreator(id: string): Promise<TemplateWithCreator | null> {
+    const prismaTemplate: any = await prisma.template.findUnique({
+      where: { id },
+      include: { createdBy: true },
+    });
+
+    if (!prismaTemplate) return null;
+
+    return {
+      template: this.toDomain(prismaTemplate),
+      creator: {
+        email: (prismaTemplate.createdBy as any)?.email,
+        name: (prismaTemplate.createdBy as any)?.completeName,
+      }
+    };
+  }
+
+  async findUserTemplatesWithCreator(userId: string): Promise<TemplateWithCreator[]> {
+    const prismaTemplates: any[] = await prisma.template.findMany({
+      where: { createdById: userId },
+      include: { createdBy: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return prismaTemplates.map(t => ({
+      template: this.toDomain(t),
+      creator: {
+        email: (t.createdBy as any)?.email,
+        name: (t.createdBy as any)?.completeName,
+      }
+    }));
+  }
+
+  async findPublicTemplatesWithCreator(): Promise<TemplateWithCreator[]> {
+    const prismaTemplates: any[] = await prisma.template.findMany({
+      where: { isPublic: true },
+      include: { createdBy: true },
+      orderBy: [
+        { usageCount: 'desc' },
+        { rating: 'desc' },
+      ],
+    });
+
+    return prismaTemplates.map(t => ({
+      template: this.toDomain(t),
+      creator: {
+        email: (t.createdBy as any)?.email,
+        name: (t.createdBy as any)?.completeName,
+      }
+    }));
+  }
+
+  async findTemplatesWithCreator(filters: {
+    userId?: string;
+    includePublic?: boolean;
+  }): Promise<TemplateWithCreator[]> {
+    const where = filters.includePublic
+      ? {
+        OR: [
+          { createdById: filters.userId },
+          { isPublic: true },
+        ],
+      }
+      : { createdById: filters.userId };
+
+    const prismaTemplates: any[] = await prisma.template.findMany({
+      where,
+      include: { createdBy: true },
+      orderBy: [
+        { usageCount: 'desc' },
+        { createdAt: 'desc' },
+      ],
+    });
+
+    return prismaTemplates.map(t => ({
+      template: this.toDomain(t),
+      creator: {
+        email: (t.createdBy as any)?.email,
+        name: (t.createdBy as any)?.completeName,
+      }
+    }));
   }
 }

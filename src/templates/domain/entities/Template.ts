@@ -1,15 +1,16 @@
 // src/templates/domain/entities/Template.ts
-
-import { TemplateComplexity } from '../value-objects/TemplateEnums';
+import { TemplateComplexity, TemplateCategory, TemplateIndustry } from '../value-objects/TemplateEnums';
+import { TemplateType, TemplateContent } from '../value-objects/TemplateTypes';
 
 export interface TemplateProps {
   id: string;
   name: string;
   description?: string;
-  category?: string;
-  industry?: string;
+  category?: TemplateCategory;
+  industry?: TemplateIndustry;
   complexity: TemplateComplexity;
-  content: Record<string, any>; // Estructura JSON de fases/tareas
+  templateType: TemplateType; // ← NUEVO CAMPO
+  content: TemplateContent;   // ← ACTUALIZADO a TemplateContent
   isPublic: boolean;
   usageCount: number;
   rating?: number;
@@ -22,10 +23,11 @@ export class Template {
   private readonly id: string;
   private name: string;
   private description?: string;
-  private category?: string;
-  private industry?: string;
+  private category?: TemplateCategory;
+  private industry?: TemplateIndustry;
   private complexity: TemplateComplexity;
-  private content: Record<string, any>;
+  private templateType: TemplateType; // ← NUEVO CAMPO
+  private content: TemplateContent;   // ← ACTUALIZADO
   private isPublic: boolean;
   private usageCount: number;
   private rating?: number;
@@ -40,6 +42,7 @@ export class Template {
     this.category = props.category;
     this.industry = props.industry;
     this.complexity = props.complexity;
+    this.templateType = props.templateType; // ← INICIALIZADO
     this.content = props.content;
     this.isPublic = props.isPublic;
     this.usageCount = props.usageCount;
@@ -47,16 +50,19 @@ export class Template {
     this.createdById = props.createdById;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
+    
+    this.validateContent(); // ← VALIDACIÓN AUTOMÁTICA
   }
 
   // Getters
   getId(): string { return this.id; }
   getName(): string { return this.name; }
   getDescription(): string | undefined { return this.description; }
-  getCategory(): string | undefined { return this.category; }
-  getIndustry(): string | undefined { return this.industry; }
+  getCategory(): TemplateCategory | undefined { return this.category; }
+  getIndustry(): TemplateIndustry | undefined { return this.industry; }
   getComplexity(): TemplateComplexity { return this.complexity; }
-  getContent(): Record<string, any> { return { ...this.content }; }
+  getTemplateType(): TemplateType { return this.templateType; } // ← NUEVO GETTER
+  getContent(): TemplateContent { return { ...this.content }; } // ← TIPADO
   isPublicTemplate(): boolean { return this.isPublic; }
   getUsageCount(): number { return this.usageCount; }
   getRating(): number | undefined { return this.rating; }
@@ -84,8 +90,14 @@ export class Template {
     this.updatedAt = new Date();
   }
 
-  updateContent(content: Record<string, any>): void {
+  updateContent(content: TemplateContent): void { // ← TIPADO ACTUALIZADO
     this.content = content;
+    this.validateContent(); // ← VALIDAR NUEVO CONTENIDO
+    this.updatedAt = new Date();
+  }
+
+  updateTemplateType(templateType: TemplateType): void { // ← NUEVO MÉTODO
+    this.templateType = templateType;
     this.updatedAt = new Date();
   }
 
@@ -123,5 +135,53 @@ export class Template {
 
   canBeUsedBy(userId: string): boolean {
     return this.isPublic || this.isCreator(userId);
+  }
+
+  // ← NUEVO: Validación de contenido según tipo
+  private validateContent(): void {
+    if (this.content.type !== this.templateType) {
+      throw new Error(`Content type ${this.content.type} does not match template type ${this.templateType}`);
+    }
+
+    switch (this.templateType) {
+      case TemplateType.SCRUM:
+        this.validateScrumContent();
+        break;
+      case TemplateType.KANBAN:
+        this.validateKanbanContent();
+        break;
+      case TemplateType.SIMPLE:
+        this.validateSimpleContent();
+        break;
+      default:
+        throw new Error(`Unsupported template type: ${this.templateType}`);
+    }
+  }
+
+  private validateScrumContent(): void {
+    const content = this.content as any;
+    if (!content.settings?.sprintDuration || content.settings.sprintDuration <= 0) {
+      throw new Error("Scrum template must have positive sprint duration");
+    }
+    if (!content.workflows?.sprint?.phases || content.workflows.sprint.phases.length === 0) {
+      throw new Error("Scrum template must have sprint phases");
+    }
+    if (!content.ceremonies?.dailyScrum) {
+      throw new Error("Scrum template must have daily scrum ceremony defined");
+    }
+  }
+
+  private validateKanbanContent(): void {
+    const content = this.content as any;
+    if (!content.workflows?.columns || content.workflows.columns.length === 0) {
+      throw new Error("Kanban template must have columns defined");
+    }
+  }
+
+  private validateSimpleContent(): void {
+    const content = this.content as any;
+    if (!content.tasks?.statuses || content.tasks.statuses.length === 0) {
+      throw new Error("Simple template must have task statuses defined");
+    }
   }
 }

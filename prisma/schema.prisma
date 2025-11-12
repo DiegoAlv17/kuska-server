@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,49 +5,39 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  // Use DIRECT_URL for migrations when set (recommended for Supabase)
   directUrl = env("DIRECT_URL")
 }
 
-// ============================================
-// Auth Module Models
-// ============================================
-
 model User {
-  id           String    @id @default(uuid())
-  email        String    @unique
-  password     String
-  completeName String
-  avatar       String?
-  phone        String?
-  timezone     String    @default("UTC")
-  locale       String    @default("es")
-  isActive     Boolean   @default(true)
-  lastLogin    DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-
-  // Relations
-  userRoles       UserRole[]
-  projectsCreated Project[]       @relation("ProjectCreator")
-  projectMembers  ProjectMember[]
-
-  templatesCreated  Template[]        @relation("TemplateCreator")
-  templateVersions  TemplateVersion[]
+  id               String            @id @default(uuid())
+  email            String            @unique
+  password         String
+  completeName     String
+  avatar           String?
+  phone            String?
+  timezone         String            @default("UTC")
+  locale           String            @default("es")
+  isActive         Boolean           @default(true)
+  lastLogin        DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  projectMembers   ProjectMember[]
+  projectsCreated  Project[]         @relation("ProjectCreator")
+  templateVersions TemplateVersion[]
+  templatesCreated Template[]        @relation("TemplateCreator")
+  userRoles        UserRole[]
 
   @@map("users")
 }
 
 model Role {
-  id          String   @id @default(uuid())
-  name        String   @unique
+  id          String     @id @default(uuid())
+  name        String     @unique
   description String?
-  permissions Json     @default("{}")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  userRoles UserRole[]
+  permissions Json       @default("{}")
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  userRoles   UserRole[]
 
   @@map("roles")
 }
@@ -61,18 +48,213 @@ model UserRole {
   roleId         String
   organizationId String?
   assignedAt     DateTime @default(now())
-
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  role           Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, roleId, organizationId])
   @@map("user_roles")
 }
 
-// ============================================
-// Projects Module Models
-// ============================================
+model Project {
+  id             String           @id @default(uuid())
+  name           String
+  description    String?
+  code           String           @unique
+  status         ProjectStatus    @default(ACTIVE)
+  type           TemplateType     @default(SIMPLE)
+  createdById    String
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  templateId     String?
+  fases_proyecto fases_proyecto[]
+  hitos          hitos[]
+  members        ProjectMember[]
+  createdBy      User             @relation("ProjectCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  template       Template?        @relation("ProjectTemplate", fields: [templateId], references: [id])
+  tareas         tareas[]
+
+  @@map("projects")
+}
+
+model ProjectMember {
+  id        String      @id @default(uuid())
+  projectId String
+  userId    String
+  role      ProjectRole @default(MEMBER)
+  addedAt   DateTime    @default(now())
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@map("project_members")
+}
+
+model Template {
+  id           String             @id @default(uuid())
+  name         String             @unique
+  description  String?
+  category     TemplateCategory?
+  industry     TemplateIndustry?
+  complexity   TemplateComplexity @default(MEDIUM)
+  content      Json
+  isPublic     Boolean            @default(false)
+  usageCount   Int                @default(0)
+  rating       Decimal?           @db.Decimal(3, 2)
+  createdById  String
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  templateType TemplateType?      @default(SIMPLE)
+  projects     Project[]          @relation("ProjectTemplate")
+  versions     TemplateVersion[]
+  createdBy    User               @relation("TemplateCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@map("templates")
+}
+
+model TemplateVersion {
+  id            String   @id @default(uuid())
+  templateId    String
+  versionNumber Int
+  content       Json
+  notes         String?
+  createdById   String
+  createdAt     DateTime @default(now())
+  createdBy     User     @relation(fields: [createdById], references: [id])
+  template      Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, versionNumber])
+  @@map("template_versions")
+}
+
+model adjuntos_tarea {
+  id         String   @id
+  taskId     String
+  fileId     String?
+  uploadedBy String?
+  uploadedAt DateTime @default(now())
+  tareas     tareas   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId], map: "idx_adjuntos_tarea")
+}
+
+model comentarios_tarea {
+  id              String    @id
+  taskId          String
+  userId          String?
+  content         String
+  parentCommentId String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime
+  deletedAt       DateTime?
+  tareas          tareas    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([parentCommentId], map: "idx_comentarios_padre")
+  @@index([taskId], map: "idx_comentarios_tarea")
+}
+
+model dependencias_tareas {
+  id                                                 String   @id
+  taskId                                             String
+  dependsOnTaskId                                    String
+  dependencyType                                     String
+  delayDays                                          Int      @default(0)
+  createdAt                                          DateTime @default(now())
+  tareas_dependencias_tareas_dependsOnTaskIdTotareas tareas   @relation("dependencias_tareas_dependsOnTaskIdTotareas", fields: [dependsOnTaskId], references: [id], onDelete: Cascade)
+  tareas_dependencias_tareas_taskIdTotareas          tareas   @relation("dependencias_tareas_taskIdTotareas", fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, dependsOnTaskId])
+  @@index([taskId], map: "idx_dependencias_tarea")
+}
+
+model etiquetas {
+  id               String             @id
+  name             String
+  color            String
+  projectId        String?
+  createdBy        String?
+  createdAt        DateTime           @default(now())
+  etiquetas_tareas etiquetas_tareas[]
+
+  @@unique([name, projectId])
+  @@index([projectId], map: "idx_etiquetas_proyecto")
+}
+
+model etiquetas_tareas {
+  taskId    String
+  tagId     String
+  etiquetas etiquetas @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  tareas    tareas    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, tagId])
+  @@index([tagId], map: "idx_etiquetas_tareas_etiqueta")
+}
+
+model fases_proyecto {
+  id          String    @id
+  projectId   String
+  name        String
+  description String?
+  order       Int
+  startDate   DateTime?
+  endDate     DateTime?
+  isCompleted Boolean   @default(false)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  projects    Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tareas      tareas[]
+
+  @@index([projectId, order], map: "idx_fases_proyecto")
+}
+
+model hitos {
+  id          String    @id
+  projectId   String
+  name        String
+  description String?
+  dueDate     DateTime
+  status      String    @default("pendiente")
+  progress    Int       @default(0)
+  createdById String?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  projects    Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tareas      tareas[]
+
+  @@index([dueDate], map: "idx_hitos_fecha_limite")
+  @@index([projectId], map: "idx_hitos_proyecto")
+}
+
+model tareas {
+  id                                                              String                @id
+  projectId                                                       String
+  phaseId                                                         String?
+  milestoneId                                                     String?
+  title                                                           String
+  description                                                     String?
+  status                                                          String                @default("backlog")
+  priority                                                        String                @default("media")
+  assignedToId                                                    String?
+  reportedById                                                    String?
+  dueDate                                                         DateTime?
+  estimatedHours                                                  Decimal?              @db.Decimal(5, 2)
+  spentHours                                                      Decimal?              @db.Decimal(5, 2)
+  order                                                           Int?
+  createdAt                                                       DateTime              @default(now())
+  updatedAt                                                       DateTime
+  completedAt                                                     DateTime?
+  deletedAt                                                       DateTime?
+  adjuntos_tarea                                                  adjuntos_tarea[]
+  comentarios_tarea                                               comentarios_tarea[]
+  dependencias_tareas_dependencias_tareas_dependsOnTaskIdTotareas dependencias_tareas[] @relation("dependencias_tareas_dependsOnTaskIdTotareas")
+  dependencias_tareas_dependencias_tareas_taskIdTotareas          dependencias_tareas[] @relation("dependencias_tareas_taskIdTotareas")
+  etiquetas_tareas                                                etiquetas_tareas[]
+  hitos                                                           hitos?                @relation(fields: [milestoneId], references: [id])
+  fases_proyecto                                                  fases_proyecto?       @relation(fields: [phaseId], references: [id])
+  projects                                                        Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([order], map: "idx_tareas_orden")
+  @@index([projectId, status], map: "idx_tareas_proyecto_estado")
+}
 
 enum ProjectStatus {
   ACTIVE
@@ -93,248 +275,27 @@ enum TemplateType {
   SIMPLE
 }
 
-model Project {
-  id          String        @id @default(uuid())
-  name        String
-  description String?
-  code        String        @unique
-  status      ProjectStatus @default(ACTIVE)
-  type        TemplateType  @default(SIMPLE)
-  createdById String
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-
-  // Relations
-  createdBy User            @relation("ProjectCreator", fields: [createdById], references: [id], onDelete: Cascade)
-  members   ProjectMember[]
-
-  // Tasks related
-  phases    Phase[]
-  milestones Milestone[]
-  tasks     Task[]
-
-  templateId  String?
-  template    Template? @relation("ProjectTemplate", fields: [templateId], references: [id], onDelete: SetNull)
-
-
-  @@map("projects")
-}
-
-model ProjectMember {
-  id        String      @id @default(uuid())
-  projectId String
-  userId    String
-  role      ProjectRole @default(MEMBER)
-  addedAt   DateTime    @default(now())
-
-  // Relations
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([projectId, userId])
-  @@map("project_members")
-}
-
-// ============================================
-// Templates Module Models - MANTENIENDO TemplateType
-// ============================================
-
-
 enum TemplateComplexity {
   SIMPLE
   MEDIUM
   COMPLEX
 }
 
-model Template {
-  id          String              @id @default(uuid())
-  name        String              @unique
-  description String?
-  category    String?             // 'software', 'marketing', etc.
-  industry    String?             // 'tech', 'retail', etc.
-  complexity  TemplateComplexity  @default(MEDIUM)
-  content     Json                // Estructura de fases, tareas, etc.
-  isPublic    Boolean             @default(false)
-  usageCount  Int                 @default(0)
-  rating      Decimal?            @db.Decimal(3, 2) // 0.00 - 5.00
-  createdById String
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
-
-  // Relations
-  createdBy   User                @relation("TemplateCreator", fields: [createdById], references: [id], onDelete: Cascade)
-  versions    TemplateVersion[]
-  projects    Project[]           @relation("ProjectTemplate")
-
-  @@map("templates")
+enum TemplateCategory {
+  SOFTWARE
+  MARKETING
+  DESIGN
+  OPERATIONS
+  RESEARCH
+  OTHER
 }
 
-model TemplateVersion {
-  id           String   @id @default(uuid())
-  templateId   String
-  versionNumber Int
-  content      Json
-  notes        String?
-  createdById  String
-  createdAt    DateTime @default(now())
-
-  // Relations
-  template     Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  createdBy    User     @relation(fields: [createdById], references: [id])
-
-  @@unique([templateId, versionNumber])
-  @@map("template_versions")
+enum TemplateIndustry {
+  TECH
+  FINANCE
+  HEALTHCARE
+  EDUCATION
+  RETAIL
+  MANUFACTURING
+  OTHER
 }
-
-// ============================================
-// Tasks Module Models
-// ============================================
-
-model Phase {
-  id          String   @id @default(uuid())
-  projectId   String
-  name        String
-  description String?
-  order    Int @map("order")
-  startDate   DateTime?
-  endDate     DateTime?
-  isCompleted Boolean  @default(false)
-  completedAt DateTime?
-  createdAt   DateTime @default(now())
-
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  tasks   Task[]
-
-  @@map("fases_proyecto")
-  @@index([projectId, order], name: "idx_fases_proyecto")
-}
-
-model Milestone {
-  id          String   @id @default(uuid())
-  projectId   String
-  name        String
-  description String?
-  dueDate     DateTime
-  status      String   @default("pendiente")
-  progress    Int      @default(0)
-  createdById String?
-  completedAt DateTime?
-  createdAt   DateTime @default(now())
-
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  tasks   Task[]
-
-  @@map("hitos")
-  @@index([projectId], name: "idx_hitos_proyecto")
-  @@index([dueDate], name: "idx_hitos_fecha_limite")
-}
-
-model Task {
-  id             String   @id @default(uuid())
-  projectId      String
-  phaseId        String? 
-  milestoneId    String?
-  title          String
-  description    String?
-  status         String   @default("backlog")
-  priority       String   @default("media")
-  assignedToId   String?
-  reportedById   String?
-  dueDate        DateTime?
-  estimatedHours Decimal? @db.Decimal(5,2)
-  spentHours     Decimal? @db.Decimal(5,2)
-  order       Int? @map("order")
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  completedAt    DateTime?
-  deletedAt      DateTime?
-
-  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  phase     Phase?    @relation(fields: [phaseId], references: [id], onDelete: SetNull)
-  milestone Milestone? @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
-  
-  // relation backrefs
-  taskTags        TaskTag[]
-  comments        TaskComment[]
-  attachments     TaskAttachment[]
-  dependencies    TaskDependency[] @relation("task_dependencies")
-  dependsOn       TaskDependency[] @relation("task_depends_on")
-
-  @@map("tareas")
-  @@index([projectId, status], name: "idx_tareas_proyecto_estado")
-  @@index([order], name: "idx_tareas_orden")
-}
-
-model Tag {
-  id        String  @id @default(uuid())
-  name      String
-  color     String
-  projectId String?
-  createdBy String?
-  createdAt DateTime @default(now())
-
-  @@unique([name, projectId])
-  @@map("etiquetas")
-  @@index([projectId], name: "idx_etiquetas_proyecto")
-  taskTags  TaskTag[]
-}
-
-model TaskTag {
-  taskId String
-  tagId  String
-
-  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
-
-  @@id([taskId, tagId])
-  @@map("etiquetas_tareas")
-  @@index([tagId], name: "idx_etiquetas_tareas_etiqueta")
-}
-
-model TaskDependency {
-  id               String   @id @default(uuid())
-  taskId           String
-  dependsOnTaskId  String
-  dependencyType   String
-  delayDays        Int      @default(0)
-  createdAt        DateTime @default(now())
-
-  task          Task @relation("task_dependencies", fields: [taskId], references: [id], onDelete: Cascade)
-  dependsOnTask Task @relation("task_depends_on", fields: [dependsOnTaskId], references: [id], onDelete: Cascade)
-
-  @@unique([taskId, dependsOnTaskId])
-  @@map("dependencias_tareas")
-  @@index([taskId], name: "idx_dependencias_tarea")
-}
-
-model TaskComment {
-  id            String   @id @default(uuid())
-  taskId        String
-  userId        String?
-  content       String
-  parentCommentId String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  deletedAt     DateTime?
-
-  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
-
-  @@map("comentarios_tarea")
-  @@index([taskId], name: "idx_comentarios_tarea")
-  @@index([parentCommentId], name: "idx_comentarios_padre")
-}
-
-model TaskAttachment {
-  id        String   @id @default(uuid())
-  taskId    String
-  fileId    String?
-  uploadedBy String?
-  uploadedAt DateTime @default(now())
-
-  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
-
-  @@map("adjuntos_tarea")
-  @@index([taskId], name: "idx_adjuntos_tarea")
-}
-
-

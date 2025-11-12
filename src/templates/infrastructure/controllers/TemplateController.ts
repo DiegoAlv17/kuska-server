@@ -8,6 +8,7 @@ import { GetTemplateUseCase } from '../../application/use-cases/GetTemplateUseCa
 import { ListTemplatesUseCase } from '../../application/use-cases/ListTemplatesUseCase';
 import { UpdateTemplateUseCase } from '../../application/use-cases/UpdateTemplateUseCase';
 import { DeleteTemplateUseCase } from '../../application/use-cases/DeleteTemplateUseCase';
+import { IncrementTemplateUsageUseCase } from '../../application/use-cases/IncrementTemplateUsageUseCase'; // ✅ NUEVO
 import { PrismaTemplateRepository } from '../repositories/PrismaTemplateRepository';
 
 export class TemplateController {
@@ -16,6 +17,7 @@ export class TemplateController {
   private listTemplatesUseCase: ListTemplatesUseCase;
   private updateTemplateUseCase: UpdateTemplateUseCase;
   private deleteTemplateUseCase: DeleteTemplateUseCase;
+  private incrementTemplateUsageUseCase: IncrementTemplateUsageUseCase; // ✅ NUEVO
 
   constructor() {
     const templateRepository = new PrismaTemplateRepository();
@@ -25,6 +27,7 @@ export class TemplateController {
     this.listTemplatesUseCase = new ListTemplatesUseCase(templateRepository);
     this.updateTemplateUseCase = new UpdateTemplateUseCase(templateRepository);
     this.deleteTemplateUseCase = new DeleteTemplateUseCase(templateRepository);
+    this.incrementTemplateUsageUseCase = new IncrementTemplateUsageUseCase(templateRepository); // ✅ NUEVO
   }
 
   createTemplate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -141,6 +144,30 @@ export class TemplateController {
       res.status(200).json({
         success: true,
         message: 'Template deleted successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  // ✅ NUEVO MÉTODO: Incrementar uso de template
+  incrementTemplateUsage = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          message: 'User not authenticated',
+        });
+        return;
+      }
+
+      const { templateId } = req.params;
+      
+      await this.incrementTemplateUsageUseCase.execute(templateId, req.user.userId);
+
+      res.status(200).json({
+        success: true,
+        message: 'Template usage incremented successfully',
       });
     } catch (error) {
       next(error);
