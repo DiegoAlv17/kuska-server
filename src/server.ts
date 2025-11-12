@@ -8,9 +8,12 @@ import cookieParser from 'cookie-parser';
 import type { Request, Response } from 'express';
 import authRoutes from './auth/infrastructure/routes/authRoutes';
 import projectRoutes from './projects/infrastructure/routes/projectRoutes';
-import taskRoutes from './task/infrastructure/routes/taskRoutes';
+import taskRoutes from './projects/infrastructure/routes/taskRoutes';
 import teamRoutes from './tems/infrastructure/routes/teamRoutes';
 import { errorHandler } from './shared/infrastructure/middlewares/errorHandler';
+
+import templateRoutes from './templates/infrastructure/routes/templateRoutes';
+
 
 const app = express();
 
@@ -43,6 +46,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/teams', teamRoutes);
+
+app.use('/api/templates', templateRoutes);
+
 
 // Swagger UI (OpenAPI)
 try {

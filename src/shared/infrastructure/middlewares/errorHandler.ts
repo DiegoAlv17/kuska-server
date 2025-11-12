@@ -4,6 +4,12 @@ import { UserNotFoundException } from '../../../auth/domain/exceptions/UserNotFo
 import { InvalidCredentialsException } from '../../../auth/domain/exceptions/InvalidCredentialsException';
 import { UserAlreadyExistsException } from '../../../auth/domain/exceptions/UserAlreadyExistsException';
 
+import {
+  TemplateNotFoundException,
+  TemplateAccessDeniedException,
+  InsufficientPermissionsException as TemplateInsufficientPermissions
+} from '../../../templates/domain/exceptions/TemplateExceptions';
+
 export const errorHandler = (
   error: Error,
   req: Request,
@@ -76,4 +82,32 @@ export const errorHandler = (
     message: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error',
     ...(process.env.NODE_ENV === 'development' && { stack: error.stack }),
   });
+
+  //TEMPLATE ERROR
+
+  if (error instanceof TemplateNotFoundException) {
+    res.status(404).json({
+      success: false,
+      message: error.message,
+    });
+    return;
+  }
+
+  if (error instanceof TemplateAccessDeniedException) {
+    res.status(403).json({
+      success: false,
+      message: error.message,
+    });
+    return;
+  }
+
+  if (error instanceof TemplateInsufficientPermissions) {
+    res.status(403).json({
+      success: false,
+      message: error.message,
+    });
+    return;
+  }
+
+
 };
