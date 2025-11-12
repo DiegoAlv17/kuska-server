@@ -1,6 +1,6 @@
 import { prisma } from '../../../auth/infrastructure/persistence/PrismaClient';
 import { Task } from '../../domain/entities/Task';
-import { ITaskRepository } from '../../domain/repositories/task-repository.interface';
+import { ITaskRepository } from '../../domain/repositories/ITaskRepository';
 
 export class PrismaTaskRepository implements ITaskRepository {
   async create(task: Task): Promise<Task> {
