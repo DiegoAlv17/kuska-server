@@ -16,6 +16,7 @@ router.patch('/:projectId', projectController.updateProject); // Actualizar proy
 router.delete('/:projectId', projectController.deleteProject); // Eliminar proyecto (solo admins)
 
 // Rutas de miembros
+router.get('/:projectId/members', projectController.getProjectMembers); // Obtener miembros del proyecto
 router.post('/:projectId/members', projectController.addMember); // Agregar miembro (solo admins)
 router.patch('/:projectId/members/:memberId', projectController.updateMemberRole); // Cambiar rol (solo admins)
 router.delete('/:projectId/members/:memberId', projectController.removeMember); // Remover miembro (solo admins)

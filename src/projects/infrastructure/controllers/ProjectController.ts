@@ -64,7 +64,13 @@ export class ProjectController {
       projectRepository,
       projectMemberRepository
     );
+
+    this.projectMemberRepository = projectMemberRepository;
+    this.projectRepository = projectRepository;
   }
+
+  private projectMemberRepository: PrismaProjectMemberRepository;
+  private projectRepository: PrismaProjectRepository;
 
   createProject = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -258,6 +264,52 @@ export class ProjectController {
       res.status(200).json({
         success: true,
         message: 'Member removed successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getProjectMembers = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          message: 'User not authenticated',
+        });
+        return;
+      }
+
+      const { projectId } = req.params;
+
+      // Verificar que el proyecto existe
+      const project = await this.projectRepository.findById(projectId);
+      if (!project) {
+        res.status(404).json({
+          success: false,
+          message: 'Project not found',
+        });
+        return;
+      }
+
+      // Verificar que el usuario es miembro del proyecto
+      const isMember = await this.projectMemberRepository.findByProjectAndUser(projectId, req.user.userId);
+      const isCreator = project.getCreatedById() === req.user.userId;
+
+      if (!isMember && !isCreator) {
+        res.status(403).json({
+          success: false,
+          message: 'You are not a member of this project',
+        });
+        return;
+      }
+
+      // Obtener todos los miembros del proyecto
+      const members = await this.projectMemberRepository.findByProject(projectId);
+
+      res.status(200).json({
+        success: true,
+        data: members,
       });
     } catch (error) {
       next(error);

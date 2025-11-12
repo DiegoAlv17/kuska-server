@@ -56,6 +56,19 @@ export class TaskController {
         return res.status(403).json({ success: false, message: 'User is not a member of the project' });
       }
 
+      // Validar que assignedToId sea miembro del proyecto (si se proporciona)
+      if (body.assignedToId) {
+        const assignedMember = await memberRepo.findByProjectAndUser(projectId, body.assignedToId);
+        const isCreator = project.getCreatedById() === body.assignedToId;
+        
+        if (!assignedMember && !isCreator) {
+          return res.status(400).json({ 
+            success: false, 
+            message: 'The assigned user is not a member of this project' 
+          });
+        }
+      }
+
       const id = uuidv4();
       const now = new Date();
       const taskEntity = new Task({

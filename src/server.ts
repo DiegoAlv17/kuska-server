@@ -23,9 +23,23 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // CORS configuration
+const allowedOrigins = process.env.CORS_ORIGIN?.split(',') || ['*'];
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || '*',
+    origin: (origin, callback) => {
+      // Permitir solicitudes sin origin (como Postman o apps móviles)
+      if (!origin) return callback(null, true);
+      
+      // Si CORS_ORIGIN es '*', permitir todos
+      if (allowedOrigins.includes('*')) return callback(null, true);
+      
+      // Verificar si el origin está en la lista permitida
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
