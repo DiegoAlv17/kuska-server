@@ -6,8 +6,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   // Use DIRECT_URL for migrations when set (recommended for Supabase)
   directUrl = env("DIRECT_URL")
 }
@@ -17,23 +17,23 @@ datasource db {
 // ============================================
 
 model User {
-  id            String    @id @default(uuid())
-  email         String    @unique
-  password      String
-  completeName  String
-  avatar        String?
-  phone         String?
-  timezone      String    @default("UTC")
-  locale        String    @default("es")
-  isActive      Boolean   @default(true)
-  lastLogin     DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id           String    @id @default(uuid())
+  email        String    @unique
+  password     String
+  completeName String
+  avatar       String?
+  phone        String?
+  timezone     String    @default("UTC")
+  locale       String    @default("es")
+  isActive     Boolean   @default(true)
+  lastLogin    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   // Relations
-  userRoles        UserRole[]
-  projectsCreated  Project[]        @relation("ProjectCreator")
-  projectMembers   ProjectMember[]
+  userRoles       UserRole[]
+  projectsCreated Project[]       @relation("ProjectCreator")
+  projectMembers  ProjectMember[]
 
   @@map("users")
 }
@@ -47,7 +47,7 @@ model Role {
   updatedAt   DateTime @updatedAt
 
   // Relations
-  userRoles   UserRole[]
+  userRoles UserRole[]
 
   @@map("roles")
 }
@@ -60,8 +60,8 @@ model UserRole {
   assignedAt     DateTime @default(now())
 
   // Relations
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role           Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@unique([userId, roleId, organizationId])
   @@map("user_roles")
