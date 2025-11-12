@@ -8,7 +8,7 @@ import cookieParser from 'cookie-parser';
 import type { Request, Response } from 'express';
 import authRoutes from './auth/infrastructure/routes/authRoutes';
 import projectRoutes from './projects/infrastructure/routes/projectRoutes';
-import taskRoutes from './task/infrastructure/routes/taskRoutes';
+import taskRoutes from './projects/infrastructure/routes/taskRoutes';
 import teamRoutes from './tems/infrastructure/routes/teamRoutes';
 import { errorHandler } from './shared/infrastructure/middlewares/errorHandler';
 

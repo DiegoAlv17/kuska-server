@@ -6,8 +6,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   // Use DIRECT_URL for migrations when set (recommended for Supabase)
   directUrl = env("DIRECT_URL")
 }
@@ -17,23 +17,23 @@ datasource db {
 // ============================================
 
 model User {
-  id            String    @id @default(uuid())
-  email         String    @unique
-  password      String
-  completeName  String
-  avatar        String?
-  phone         String?
-  timezone      String    @default("UTC")
-  locale        String    @default("es")
-  isActive      Boolean   @default(true)
-  lastLogin     DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id           String    @id @default(uuid())
+  email        String    @unique
+  password     String
+  completeName String
+  avatar       String?
+  phone        String?
+  timezone     String    @default("UTC")
+  locale       String    @default("es")
+  isActive     Boolean   @default(true)
+  lastLogin    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   // Relations
-  userRoles        UserRole[]
-  projectsCreated  Project[]        @relation("ProjectCreator")
-  projectMembers   ProjectMember[]
+  userRoles       UserRole[]
+  projectsCreated Project[]       @relation("ProjectCreator")
+  projectMembers  ProjectMember[]
 
   templatesCreated  Template[]        @relation("TemplateCreator")
   templateVersions  TemplateVersion[]
@@ -50,7 +50,7 @@ model Role {
   updatedAt   DateTime @updatedAt
 
   // Relations
-  userRoles   UserRole[]
+  userRoles UserRole[]
 
   @@map("roles")
 }
@@ -63,8 +63,8 @@ model UserRole {
   assignedAt     DateTime @default(now())
 
   // Relations
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role           Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@unique([userId, roleId, organizationId])
   @@map("user_roles")
@@ -107,6 +107,11 @@ model Project {
   // Relations
   createdBy User            @relation("ProjectCreator", fields: [createdById], references: [id], onDelete: Cascade)
   members   ProjectMember[]
+
+  // Tasks related
+  phases    Phase[]
+  milestones Milestone[]
+  tasks     Task[]
 
   templateId  String?
   template    Template? @relation("ProjectTemplate", fields: [templateId], references: [id], onDelete: SetNull)
@@ -180,4 +185,156 @@ model TemplateVersion {
   @@unique([templateId, versionNumber])
   @@map("template_versions")
 }
+
+// ============================================
+// Tasks Module Models
+// ============================================
+
+model Phase {
+  id          String   @id @default(uuid())
+  projectId   String
+  name        String
+  description String?
+  order    Int @map("order")
+  startDate   DateTime?
+  endDate     DateTime?
+  isCompleted Boolean  @default(false)
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks   Task[]
+
+  @@map("fases_proyecto")
+  @@index([projectId, order], name: "idx_fases_proyecto")
+}
+
+model Milestone {
+  id          String   @id @default(uuid())
+  projectId   String
+  name        String
+  description String?
+  dueDate     DateTime
+  status      String   @default("pendiente")
+  progress    Int      @default(0)
+  createdById String?
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks   Task[]
+
+  @@map("hitos")
+  @@index([projectId], name: "idx_hitos_proyecto")
+  @@index([dueDate], name: "idx_hitos_fecha_limite")
+}
+
+model Task {
+  id             String   @id @default(uuid())
+  projectId      String
+  phaseId        String? 
+  milestoneId    String?
+  title          String
+  description    String?
+  status         String   @default("backlog")
+  priority       String   @default("media")
+  assignedToId   String?
+  reportedById   String?
+  dueDate        DateTime?
+  estimatedHours Decimal? @db.Decimal(5,2)
+  spentHours     Decimal? @db.Decimal(5,2)
+  order       Int? @map("order")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  completedAt    DateTime?
+  deletedAt      DateTime?
+
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  phase     Phase?    @relation(fields: [phaseId], references: [id], onDelete: SetNull)
+  milestone Milestone? @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+  
+  // relation backrefs
+  taskTags        TaskTag[]
+  comments        TaskComment[]
+  attachments     TaskAttachment[]
+  dependencies    TaskDependency[] @relation("task_dependencies")
+  dependsOn       TaskDependency[] @relation("task_depends_on")
+
+  @@map("tareas")
+  @@index([projectId, status], name: "idx_tareas_proyecto_estado")
+  @@index([order], name: "idx_tareas_orden")
+}
+
+model Tag {
+  id        String  @id @default(uuid())
+  name      String
+  color     String
+  projectId String?
+  createdBy String?
+  createdAt DateTime @default(now())
+
+  @@unique([name, projectId])
+  @@map("etiquetas")
+  @@index([projectId], name: "idx_etiquetas_proyecto")
+  taskTags  TaskTag[]
+}
+
+model TaskTag {
+  taskId String
+  tagId  String
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, tagId])
+  @@map("etiquetas_tareas")
+  @@index([tagId], name: "idx_etiquetas_tareas_etiqueta")
+}
+
+model TaskDependency {
+  id               String   @id @default(uuid())
+  taskId           String
+  dependsOnTaskId  String
+  dependencyType   String
+  delayDays        Int      @default(0)
+  createdAt        DateTime @default(now())
+
+  task          Task @relation("task_dependencies", fields: [taskId], references: [id], onDelete: Cascade)
+  dependsOnTask Task @relation("task_depends_on", fields: [dependsOnTaskId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, dependsOnTaskId])
+  @@map("dependencias_tareas")
+  @@index([taskId], name: "idx_dependencias_tarea")
+}
+
+model TaskComment {
+  id            String   @id @default(uuid())
+  taskId        String
+  userId        String?
+  content       String
+  parentCommentId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("comentarios_tarea")
+  @@index([taskId], name: "idx_comentarios_tarea")
+  @@index([parentCommentId], name: "idx_comentarios_padre")
+}
+
+model TaskAttachment {
+  id        String   @id @default(uuid())
+  taskId    String
+  fileId    String?
+  uploadedBy String?
+  uploadedAt DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("adjuntos_tarea")
+  @@index([taskId], name: "idx_adjuntos_tarea")
+}
+
 
