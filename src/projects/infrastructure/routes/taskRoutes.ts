@@ -11,6 +11,7 @@ router.use(authMiddleware);
 
 // Rutas de tareas
 router.get('/', taskController.getTasks);
+router.get('/calendar', taskController.getCalendarTasks);
 router.get('/:id', taskController.getTaskById);
 router.post('/', taskController.createTask);
 router.put('/:id', taskController.updateTask);

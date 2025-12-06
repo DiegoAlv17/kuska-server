@@ -254,6 +254,7 @@ model tareas {
 
   @@index([order], map: "idx_tareas_orden")
   @@index([projectId, status], map: "idx_tareas_proyecto_estado")
+  @@index([dueDate, deletedAt], map: "idx_tareas_due_date_calendar")
 }
 
 enum ProjectStatus {

@@ -167,6 +167,69 @@ export class TaskController {
       return res.status(500).json({ success: false, message: err.message });
     }
   };
+
+  // Get calendar tasks across all user projects
+  getCalendarTasks = async (req: Request, res: Response): Promise<Response | void> => {
+    const userId = (req as any).user?.userId;
+    const { startDate, endDate, filter = 'all' } = req.query;
+
+    try {
+      if (!userId) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      // Parse dates with defaults
+      const now = new Date();
+      const parsedStartDate = startDate
+        ? new Date(startDate as string)
+        : new Date(now.getFullYear(), now.getMonth(), 1); // Start of current month
+
+      const parsedEndDate = endDate
+        ? new Date(endDate as string)
+        : new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999); // End of current month
+
+      // Validate dates
+      if (isNaN(parsedStartDate.getTime())) {
+        return res.status(400).json({ success: false, message: 'Invalid startDate format. Use ISO 8601 format.' });
+      }
+      if (isNaN(parsedEndDate.getTime())) {
+        return res.status(400).json({ success: false, message: 'Invalid endDate format. Use ISO 8601 format.' });
+      }
+      if (parsedEndDate < parsedStartDate) {
+        return res.status(400).json({ success: false, message: 'endDate must be after startDate' });
+      }
+
+      // Validate filter type
+      if (!['all', 'creado', 'asignado'].includes(filter as string)) {
+        return res.status(400).json({
+          success: false,
+          message: 'filter must be one of: all, creado, asignado'
+        });
+      }
+
+      const results = await taskRepo.findCalendarTasks({
+        userId,
+        startDate: parsedStartDate,
+        endDate: parsedEndDate,
+        filterType: filter as 'all' | 'creado' | 'asignado'
+      });
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          tasks: results,
+          meta: {
+            startDate: parsedStartDate.toISOString(),
+            endDate: parsedEndDate.toISOString(),
+            filter,
+            count: results.length
+          }
+        }
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, message: err.message });
+    }
+  };
 }
 
 export default TaskController;
