@@ -13,6 +13,7 @@ router.post('/from-template/:templateId', projectController.createFromTemplate);
 
 // Rutas de proyectos
 router.get('/', projectController.listProjects); // Listar proyectos del usuario
+router.get('/recent', projectController.getRecentProjects); // Proyectos recientes con estadísticas
 router.post('/', projectController.createProject); // Crear proyecto (cualquier usuario autenticado)
 router.get('/:projectId', projectController.getProject); // Obtener proyecto (solo miembros)
 router.patch('/:projectId', projectController.updateProject); // Actualizar proyecto (solo admins)

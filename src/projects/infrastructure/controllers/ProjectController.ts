@@ -364,4 +364,32 @@ export class ProjectController {
       next(error);
     }
   };
+
+  getRecentProjects = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          message: 'User not authenticated',
+        });
+        return;
+      }
+
+      const limit = parseInt(req.query.limit as string) || 5;
+      const offset = parseInt(req.query.offset as string) || 0;
+
+      const result = await this.projectRepository.findRecentWithStats(
+        req.user.userId,
+        limit,
+        offset
+      );
+
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 }
