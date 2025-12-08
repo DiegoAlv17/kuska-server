@@ -11,6 +11,7 @@ import projectRoutes from './projects/infrastructure/routes/projectRoutes';
 import taskRoutes from './projects/infrastructure/routes/taskRoutes';
 import teamRoutes from './tems/infrastructure/routes/teamRoutes';
 import channelRoutes from './communication/infrastructure/routes/channelRoutes';
+import messageRoutes from './communication/infrastructure/routes/messageRoutes';
 import peopleRoutes from './people/infrastructure/routes/peopleRoutes';
 import presenceRoutes from './shared/infrastructure/routes/presenceRoutes';
 import { errorHandler } from './shared/infrastructure/middlewares/errorHandler';
@@ -58,12 +59,16 @@ app.get('/', (req: Request, res: Response) => {
   });
 });
 
+// Serve static files (uploads)
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+
 // Rutas de la API
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/channels', channelRoutes);
+app.use('/api/messages', messageRoutes);
 app.use('/api/people', peopleRoutes);
 app.use('/api/presence', presenceRoutes);
 

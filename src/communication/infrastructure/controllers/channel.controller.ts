@@ -19,7 +19,61 @@ export const createChannel = async (req: Request, res: Response) => {
 
 export const listChannels = async (req: Request, res: Response) => {
   try {
-    // Pagination params
+    const userId = req.user?.userId;
+    const { teamId } = req.query;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Not authenticated' });
+    }
+
+    // If teamId provided, get channels for that team where user is member
+    if (teamId) {
+      const channels = await prisma.channel.findMany({
+        where: {
+          teamId: String(teamId),
+          members: { some: { userId } }
+        },
+        include: {
+          members: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  completeName: true,
+                  email: true,
+                  avatar: true
+                }
+              }
+            }
+          },
+          messages: {
+            take: 1,
+            orderBy: { createdAt: 'desc' },
+            select: {
+              content: true,
+              createdAt: true
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      const mapped = channels.map(c => ({
+        id: c.id,
+        name: c.name,
+        description: c.description,
+        type: c.type,
+        isPrivate: c.isPrivate,
+        memberCount: c.members?.length || 0,
+        lastMessage: c.messages[0]?.content || '',
+        lastMessageTime: c.messages[0]?.createdAt || c.createdAt,
+        createdAt: c.createdAt
+      }));
+
+      return res.json({ success: true, data: { channels: mapped } });
+    }
+
+    // Otherwise, pagination fallback
     const page = Math.max(1, parseInt(String(req.query.page || '1'), 10));
     const perPage = Math.min(100, Math.max(1, parseInt(String(req.query.perPage || '20'), 10)));
     const skip = (page - 1) * perPage;

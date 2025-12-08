@@ -182,6 +182,29 @@ export class TeamController {
           await tx.teamMember.create({ data: { teamId: team.id, userId: m.userId, role: m.role } });
         }
 
+        // Create default channel for team
+        const channel = await tx.channel.create({
+          data: {
+            name: `Chat de ${team.name}`,
+            description: `Canal principal del equipo ${team.name}`,
+            type: 'equipo',
+            teamId: team.id,
+            createdById: userId,
+            isPrivate: false
+          }
+        });
+
+        // Add all team members to the channel
+        for (const m of membersToCreate) {
+          await tx.channelMember.create({
+            data: {
+              channelId: channel.id,
+              userId: m.userId,
+              role: m.role === 'Administrador' ? 'admin' : 'miembro'
+            }
+          });
+        }
+
         return team;
       });
 
