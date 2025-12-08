@@ -4,6 +4,9 @@ export interface UserResponseDto {
   completeName: string;
   avatar?: string;
   phone?: string;
+  jobTitle?: string;
+  location?: string;
+  organization?: string;
   timezone: string;
   locale: string;
   isActive: boolean;

@@ -8,6 +8,9 @@ export interface IUser {
   completeName: string;
   avatar?: string;
   phone?: string;
+  jobTitle?: string;
+  location?: string;
+  organization?: string;
   timezone: string;
   locale: string;
   isActive: boolean;
@@ -23,6 +26,9 @@ export class User {
   private completeName: string;
   private avatar?: string;
   private phone?: string;
+  private jobTitle?: string;
+  private location?: string;
+  private organization?: string;
   private timezone: string;
   private locale: string;
   private _isActive: boolean;
@@ -37,6 +43,9 @@ export class User {
     this.completeName = props.completeName;
     this.avatar = props.avatar;
     this.phone = props.phone;
+    this.jobTitle = props.jobTitle;
+    this.location = props.location;
+    this.organization = props.organization;
     this.timezone = props.timezone;
     this.locale = props.locale;
     this._isActive = props.isActive;
@@ -94,6 +103,18 @@ export class User {
     return this.updatedAt;
   }
 
+  getJobTitle(): string | undefined {
+    return this.jobTitle;
+  }
+
+  getLocation(): string | undefined {
+    return this.location;
+  }
+
+  getOrganization(): string | undefined {
+    return this.organization;
+  }
+
   // Business methods
   updateLastLogin(): void {
     this.lastLogin = new Date();
@@ -116,12 +137,18 @@ export class User {
     phone?: string;
     timezone?: string;
     locale?: string;
+    jobTitle?: string;
+    location?: string;
+    organization?: string;
   }): void {
     if (data.completeName) this.completeName = data.completeName;
     if (data.avatar !== undefined) this.avatar = data.avatar;
     if (data.phone !== undefined) this.phone = data.phone;
     if (data.timezone) this.timezone = data.timezone;
     if (data.locale) this.locale = data.locale;
+    if (data.jobTitle !== undefined) this.jobTitle = data.jobTitle;
+    if (data.location !== undefined) this.location = data.location;
+    if (data.organization !== undefined) this.organization = data.organization;
     this.updatedAt = new Date();
   }
 

@@ -12,6 +12,7 @@ import taskRoutes from './projects/infrastructure/routes/taskRoutes';
 import teamRoutes from './tems/infrastructure/routes/teamRoutes';
 import dashboardRoutes from './dashboard/infrastructure/routes/dashboardRoutes';
 import favoriteRoutes from './favorites/infrastructure/routes/favoriteRoutes';
+import userRoutes from './users/infrastructure/routes/userRoutes';
 import { errorHandler } from './shared/infrastructure/middlewares/errorHandler';
 
 import templateRoutes from './templates/infrastructure/routes/templateRoutes';
@@ -64,6 +65,7 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/boards', favoriteRoutes);
+app.use('/api/users', userRoutes);
 
 app.use('/api/templates', templateRoutes);
 
