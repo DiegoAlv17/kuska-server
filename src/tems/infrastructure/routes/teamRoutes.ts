@@ -13,12 +13,12 @@ router.use(authMiddleware);
 router.get('/', teamController.getTeams);
 router.get('/:id', teamController.getTeamById);
 
-// Solo ADMIN y PROJECT_MANAGER pueden crear equipos
-router.post('/', requireRole('ADMIN', 'PROJECT_MANAGER'), teamController.createTeam);
+// Crear equipos: cualquier usuario autenticado puede crear equipos
+router.post('/', teamController.createTeam);
 
-// Solo ADMIN y PROJECT_MANAGER pueden actualizar equipos
-router.put('/:id', requireRole('ADMIN', 'PROJECT_MANAGER'), teamController.updateTeam);
-router.patch('/:id', requireRole('ADMIN', 'PROJECT_MANAGER'), teamController.updateTeam);
+// Actualizar equipos: el líder del equipo puede actualizar
+router.put('/:id', teamController.updateTeam);
+router.patch('/:id', teamController.updateTeam);
 
 // Solo ADMIN puede eliminar equipos
 router.delete('/:id', requireRole('ADMIN'), teamController.deleteTeam);

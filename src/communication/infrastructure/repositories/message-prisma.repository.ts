@@ -1,4 +1,4 @@
-import { prisma } from '../../auth/infrastructure/persistence/PrismaClient';
+import { prisma } from '../../../auth/infrastructure/persistence/PrismaClient';
 import { Message } from '@prisma/client';
 import { MessageEntity } from '../../domain/entities/message.entity';
 import { MessageRepository } from '../../domain/repositories/message-repository.interface';

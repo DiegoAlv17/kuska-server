@@ -1,4 +1,4 @@
-import { prisma } from '../../auth/infrastructure/persistence/PrismaClient';
+import { prisma } from '../../../auth/infrastructure/persistence/PrismaClient';
 import { Team } from '@prisma/client';
 import { TeamEntity } from '../../domain/entities/team.entity';
 

@@ -1,4 +1,4 @@
-import { prisma } from '../../auth/infrastructure/persistence/PrismaClient';
+import { prisma } from '../../../auth/infrastructure/persistence/PrismaClient';
 import { Channel } from '@prisma/client';
 import { ChannelEntity } from '../../domain/entities/channel.entity';
 import { ChannelRepository } from '../../domain/repositories/channel-repository.interface';

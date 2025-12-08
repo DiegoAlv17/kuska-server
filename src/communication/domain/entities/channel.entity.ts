@@ -6,6 +6,8 @@ export class ChannelEntity {
     public type?: string,
     public projectId?: string,
     public teamId?: string,
+    public isPrivate?: boolean,
+    public createdById?: string,
   ) {}
 }
 

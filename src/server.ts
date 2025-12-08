@@ -10,6 +10,9 @@ import authRoutes from './auth/infrastructure/routes/authRoutes';
 import projectRoutes from './projects/infrastructure/routes/projectRoutes';
 import taskRoutes from './projects/infrastructure/routes/taskRoutes';
 import teamRoutes from './tems/infrastructure/routes/teamRoutes';
+import channelRoutes from './communication/infrastructure/routes/channelRoutes';
+import peopleRoutes from './people/infrastructure/routes/peopleRoutes';
+import presenceRoutes from './shared/infrastructure/routes/presenceRoutes';
 import { errorHandler } from './shared/infrastructure/middlewares/errorHandler';
 
 import templateRoutes from './templates/infrastructure/routes/templateRoutes';
@@ -60,6 +63,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/teams', teamRoutes);
+app.use('/api/channels', channelRoutes);
+app.use('/api/people', peopleRoutes);
+app.use('/api/presence', presenceRoutes);
 
 app.use('/api/templates', templateRoutes);
 

@@ -35,6 +35,9 @@ model User {
   messages         Message[]
   reactions        Reaction[]
   presences        Presence[]
+  // Friendships relations (inverse sides)
+  friendships      Friendship[]       @relation("FriendUser")
+  friendOf         Friendship[]       @relation("FriendTarget")
 
   @@map("users")
 }
@@ -318,6 +321,7 @@ model Team {
   id           String    @id @default(uuid())
   name         String    @map("nombre")
   description  String?   @map("descripcion")
+  links        String?   @map("enlaces") // JSON string array of links (optional)
   leaderId     String?   @map("lider_id")
   projectId    String?   @map("proyecto_id")
   isActive     Boolean   @default(true) @map("esta_activo")
@@ -477,4 +481,20 @@ model Presence {
 
   @@index([channelId], map: "idx_presencia_canal")
   @@map("presencia_usuario")
+}
+
+// Simple friendships table for user-to-user contacts (unidirectional)
+model Friendship {
+  id        String   @id @default(uuid())
+  userId    String
+  friendId  String
+  status    String   @default("accepted")
+  createdAt DateTime @default(now())
+
+  user   User @relation("FriendUser", fields: [userId], references: [id], onDelete: Cascade)
+  friend User @relation("FriendTarget", fields: [friendId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, friendId])
+  @@index([userId], map: "idx_friendships_user")
+  @@map("friendships")
 }
