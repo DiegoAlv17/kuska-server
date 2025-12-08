@@ -26,6 +26,15 @@ model User {
   templateVersions TemplateVersion[]
   templatesCreated Template[]        @relation("TemplateCreator")
   userRoles        UserRole[]
+  // Relations added for teams and communication modules
+  teamsLed         Team[]            @relation("TeamLeader")
+  teamMembers      TeamMember[]
+  teamInvitations  TeamInvitation[]
+  channelMemberships ChannelMember[]
+  channelsCreated  Channel[]
+  messages         Message[]
+  reactions        Reaction[]
+  presences        Presence[]
 
   @@map("users")
 }
@@ -72,6 +81,10 @@ model Project {
   createdBy      User             @relation("ProjectCreator", fields: [createdById], references: [id], onDelete: Cascade)
   template       Template?        @relation("ProjectTemplate", fields: [templateId], references: [id])
   tareas         tareas[]
+
+  // Relations to teams & channels
+  teams         Team[]
+  channels      Channel[]
 
   @@map("projects")
 }
@@ -298,4 +311,170 @@ enum TemplateIndustry {
   RETAIL
   MANUFACTURING
   OTHER
+}
+
+// ======= Teams module (equipos) =======
+model Team {
+  id           String    @id @default(uuid())
+  name         String    @map("nombre")
+  description  String?   @map("descripcion")
+  leaderId     String?   @map("lider_id")
+  projectId    String?   @map("proyecto_id")
+  isActive     Boolean   @default(true) @map("esta_activo")
+  createdAt    DateTime  @default(now()) @map("fecha_creacion")
+  updatedAt    DateTime  @updatedAt @map("fecha_actualizacion")
+  deletedAt    DateTime? @map("fecha_eliminacion")
+
+  leader       User?     @relation("TeamLeader", fields: [leaderId], references: [id], onDelete: SetNull)
+  project      Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  members      TeamMember[]
+  invitations  TeamInvitation[]
+  channels      Channel[]
+
+  @@index([projectId], map: "idx_equipos_proyecto")
+  @@index([leaderId], map: "idx_equipos_lider")
+  @@map("equipos")
+}
+
+model TeamMember {
+  id         String   @id @default(uuid())
+  teamId     String   @map("equipo_id")
+  userId     String   @map("usuario_id")
+  role       String   @map("rol")
+  joinedAt   DateTime @default(now()) @map("fecha_union")
+  leftAt     DateTime? @map("fecha_salida")
+
+  team       Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([teamId], map: "idx_miembros_equipo_equipo")
+  @@index([userId], map: "idx_miembros_equipo_usuario")
+  @@map("miembros_equipo")
+}
+
+model TeamInvitation {
+  id           String   @id @default(uuid())
+  teamId       String   @map("equipo_id")
+  email        String
+  invitedById  String?  @map("invitado_por")
+  role         String
+  token        String   @unique
+  status       String   @default("pendiente") @map("estado")
+  expiresAt    DateTime @map("expira_en")
+  acceptedAt   DateTime? @map("fecha_aceptacion")
+  createdAt    DateTime @default(now()) @map("fecha_creacion")
+
+  team         Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  invitedBy    User?    @relation(fields: [invitedById], references: [id], onDelete: SetNull)
+
+  @@index([token], map: "idx_invitaciones_token")
+  @@index([email, status], map: "idx_invitaciones_email_estado")
+  @@map("invitaciones_equipo")
+}
+
+model TeamPermission {
+  id         String   @id @default(uuid())
+  teamId     String   @map("equipo_id")
+  userId     String   @map("usuario_id")
+  permissionId String @map("permiso_id")
+  grantedBy  String?  @map("otorgado_por")
+  expiresAt  DateTime? @map("expira_en")
+  createdAt  DateTime @default(now()) @map("fecha_creacion")
+
+  @@unique([teamId, userId, permissionId])
+  @@index([teamId, userId], map: "idx_permisos_equipo_usuario")
+  @@map("permisos_equipo")
+}
+
+// ======= Communication module (canales, mensajes, presencia) =======
+model Channel {
+  id          String    @id @default(uuid())
+  name        String    @map("nombre")
+  description String?   @map("descripcion")
+  type        String    @map("tipo")
+  projectId   String?   @map("proyecto_id")
+  teamId      String?   @map("equipo_id")
+  isPrivate   Boolean   @default(false) @map("es_privado")
+  createdById String?   @map("creado_por")
+  createdAt   DateTime  @default(now()) @map("fecha_creacion")
+  deletedAt   DateTime? @map("fecha_eliminacion")
+
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  team        Team?     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  createdBy   User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  members     ChannelMember[]
+  messages    Message[]
+  presences    Presence[]
+
+  @@index([projectId], map: "idx_canales_proyecto")
+  @@index([teamId], map: "idx_canales_equipo")
+  @@map("canales")
+}
+
+model ChannelMember {
+  channelId String @map("canal_id")
+  userId    String @map("usuario_id")
+  role      String @default("miembro")
+  joinedAt  DateTime @default(now()) @map("fecha_union")
+
+  channel   Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([channelId, userId])
+  @@index([userId], map: "idx_miembros_canal_usuario")
+  @@map("miembros_canal")
+}
+
+model Message {
+  id           String   @id @default(uuid())
+  channelId    String   @map("canal_id")
+  userId       String?  @map("usuario_id")
+  content      String   @map("contenido")
+  messageType  String   @default("texto") @map("tipo_mensaje")
+  parentId     String?  @map("mensaje_padre_id")
+  isEdited     Boolean  @default(false) @map("esta_editado")
+  editedAt     DateTime? @map("fecha_edicion")
+  createdAt    DateTime  @default(now()) @map("fecha_creacion")
+  deletedAt    DateTime? @map("fecha_eliminacion")
+
+  channel      Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  parent       Message? @relation("MessageToParent", fields: [parentId], references: [id], onDelete: Cascade)
+  children     Message[] @relation("MessageToParent")
+  reactions    Reaction[]
+
+  @@index([channelId, createdAt], map: "idx_mensajes_canal_fecha")
+  @@index([parentId], map: "idx_mensajes_padre")
+  @@map("mensajes")
+}
+
+model Reaction {
+  id        String   @id @default(uuid())
+  messageId String   @map("mensaje_id")
+  userId    String   @map("usuario_id")
+  emoji     String   @map("emoji")
+  createdAt DateTime @default(now()) @map("fecha_creacion")
+
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
+  @@index([messageId], map: "idx_reacciones_mensaje")
+  @@map("reacciones_mensaje")
+}
+
+model Presence {
+  userId       String   @id @map("usuario_id")
+  channelId    String?  @map("canal_id")
+  status       String   @default("desconectado") @map("estado")
+  isTyping     Boolean  @default(false) @map("esta_escribiendo")
+  lastActivity DateTime @default(now()) @map("ultima_actividad")
+  updatedAt    DateTime @default(now()) @map("fecha_actualizacion")
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel      Channel? @relation(fields: [channelId], references: [id], onDelete: SetNull)
+
+  @@index([channelId], map: "idx_presencia_canal")
+  @@map("presencia_usuario")
 }
