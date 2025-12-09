@@ -1,16 +1,17 @@
 import { Server as HttpServer } from 'http';
-import { Server, Socket } from 'socket.io';
+import { Server, Socket, Namespace } from 'socket.io';
 import { MessagePrismaRepository } from '../repositories/message-prisma.repository';
 import { JwtTokenService } from '../../../auth/infrastructure/services/JwtTokenService';
 import { prisma } from '../../../auth/infrastructure/persistence/PrismaClient';
 
 export class ChatGateway {
-  private io: Server;
+  private io: Namespace;
   private messageRepo = new MessagePrismaRepository();
   private tokenService = new JwtTokenService();
 
-  constructor(server: HttpServer) {
-    this.io = new Server(server, { cors: { origin: '*' } });
+  constructor(io: Server) {
+    // Use the shared Socket.IO instance with a namespace
+    this.io = io.of('/chat');
     this.configure();
   }
 

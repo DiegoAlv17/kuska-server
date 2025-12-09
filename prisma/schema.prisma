@@ -38,6 +38,9 @@ model User {
   // Friendships relations (inverse sides)
   friendships      Friendship[]       @relation("FriendUser")
   friendOf         Friendship[]       @relation("FriendTarget")
+  // Call rooms relations
+  callRoomsCreated CallRoom[]         @relation("CallRoomCreator")
+  callParticipations CallParticipant[]
 
   @@map("users")
 }
@@ -334,6 +337,7 @@ model Team {
   members      TeamMember[]
   invitations  TeamInvitation[]
   channels      Channel[]
+  callRooms     CallRoom[]
 
   @@index([projectId], map: "idx_equipos_proyecto")
   @@index([leaderId], map: "idx_equipos_lider")
@@ -497,4 +501,41 @@ model Friendship {
   @@unique([userId, friendId])
   @@index([userId], map: "idx_friendships_user")
   @@map("friendships")
+}
+
+// ======= Call Rooms module (salas de llamada) =======
+model CallRoom {
+  id          String   @id @default(uuid())
+  name        String?  @map("nombre")
+  teamId      String   @map("equipo_id")
+  createdBy   String   @map("creado_por")
+  isActive    Boolean  @default(true) @map("esta_activa")
+  startedAt   DateTime @default(now()) @map("fecha_inicio")
+  endedAt     DateTime? @map("fecha_fin")
+  createdAt   DateTime @default(now()) @map("fecha_creacion")
+
+  team         Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  creator      User     @relation("CallRoomCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  participants CallParticipant[]
+
+  @@index([teamId], map: "idx_sala_equipo")
+  @@index([isActive], map: "idx_sala_activa")
+  @@map("salas_llamada")
+}
+
+model CallParticipant {
+  id          String   @id @default(uuid())
+  roomId      String   @map("sala_id")
+  userId      String   @map("usuario_id")
+  isMuted     Boolean  @default(false) @map("esta_muteado")
+  isVideoOff  Boolean  @default(false) @map("video_apagado")
+  joinedAt    DateTime @default(now()) @map("fecha_union")
+  leftAt      DateTime? @map("fecha_salida")
+
+  room        CallRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([roomId], map: "idx_participante_sala")
+  @@index([userId], map: "idx_participante_usuario")
+  @@map("participantes_llamada")
 }
