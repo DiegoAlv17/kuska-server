@@ -8,6 +8,7 @@ const userProfileController = new UserProfileController();
 router.use(authMiddleware);
 
 router.get('/profile', userProfileController.getProfile);
+router.get('/profile/:id', userProfileController.getProfileById);
 router.patch('/profile', userProfileController.updateProfile);
 
 export default router;

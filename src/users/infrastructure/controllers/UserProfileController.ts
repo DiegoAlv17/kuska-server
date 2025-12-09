@@ -48,6 +48,37 @@ export class UserProfileController {
     }
   };
 
+  getProfileById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          message: 'User not authenticated',
+        });
+        return;
+      }
+
+      const { id } = req.params;
+      
+      if (!id) {
+        res.status(400).json({
+          success: false,
+          message: 'User ID is required',
+        });
+        return;
+      }
+
+      const profile = await this.getUserProfileUseCase.execute(id);
+
+      res.status(200).json({
+        success: true,
+        data: profile,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   updateProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       if (!req.user) {
