@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { prisma } from '../../../auth/infrastructure/persistence/PrismaClient';
-import { IProjectRepository } from '../../domain/repositories/IProjectRepository';
+import { IProjectRepository, ProjectWithStats } from '../../domain/repositories/IProjectRepository';
 import { Project } from '../../domain/entities/Project';
 import { ProjectCode } from '../../domain/value-objects/ProjectCode';
 import { ProjectStatus, ProjectStatusVO } from '../../domain/value-objects/ProjectStatus';
@@ -118,6 +118,72 @@ export class PrismaProjectRepository implements IProjectRepository {
     await prisma.project.delete({
       where: { id },
     });
+  }
+
+  async findRecentWithStats(userId: string, limit: number, offset: number): Promise<{
+    projects: ProjectWithStats[];
+    total: number;
+  }> {
+    const whereClause = {
+      OR: [
+        { createdById: userId },
+        { members: { some: { userId } } }
+      ]
+    };
+
+    const [projects, total] = await Promise.all([
+      prisma.project.findMany({
+        where: whereClause,
+        include: {
+          tareas: {
+            where: { deletedAt: null },
+            select: {
+              id: true,
+              status: true,
+              updatedAt: true
+            }
+          },
+          members: {
+            select: { id: true }
+          }
+        },
+        orderBy: { updatedAt: 'desc' },
+        take: limit,
+        skip: offset
+      }),
+      prisma.project.count({ where: whereClause })
+    ]);
+
+    return {
+      projects: projects.map((p) => {
+        const tasks = p.tareas;
+        const total = tasks.length;
+        const completed = tasks.filter(t => t.status === 'done').length;
+        const inProgress = tasks.filter(t => t.status === 'in_progress').length;
+        const todo = tasks.filter(t => t.status === 'todo' || t.status === 'backlog').length;
+        const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
+        const lastActivity = tasks.length > 0
+          ? tasks.reduce((latest, task) =>
+              task.updatedAt > latest ? task.updatedAt : latest,
+              tasks[0].updatedAt
+            )
+          : null;
+
+        return {
+          project: this.toDomain(p),
+          taskStats: {
+            total,
+            completed,
+            inProgress,
+            todo
+          },
+          progress,
+          memberCount: p.members.length,
+          lastActivity
+        };
+      }),
+      total
+    };
   }
 
   private toDomain(prismaProject: any): Project {

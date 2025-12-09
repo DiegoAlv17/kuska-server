@@ -15,8 +15,10 @@ import messageRoutes from './communication/infrastructure/routes/messageRoutes';
 import callRoutes from './communication/infrastructure/routes/callRoutes';
 import peopleRoutes from './people/infrastructure/routes/peopleRoutes';
 import presenceRoutes from './shared/infrastructure/routes/presenceRoutes';
+import dashboardRoutes from './dashboard/infrastructure/routes/dashboardRoutes';
+import favoriteRoutes from './favorites/infrastructure/routes/favoriteRoutes';
+import userRoutes from './users/infrastructure/routes/userRoutes';
 import { errorHandler } from './shared/infrastructure/middlewares/errorHandler';
-
 import templateRoutes from './templates/infrastructure/routes/templateRoutes';
 
 
@@ -73,7 +75,9 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/calls', callRoutes);
 app.use('/api/people', peopleRoutes);
 app.use('/api/presence', presenceRoutes);
-
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/boards', favoriteRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/templates', templateRoutes);
 
 

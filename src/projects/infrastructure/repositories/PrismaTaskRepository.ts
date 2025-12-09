@@ -1,6 +1,6 @@
 import { prisma } from '../../../auth/infrastructure/persistence/PrismaClient';
 import { Task } from '../../domain/entities/Task';
-import { ITaskRepository } from '../../domain/repositories/ITaskRepository';
+import { ITaskRepository, TaskWithProject } from '../../domain/repositories/ITaskRepository';
 
 export class PrismaTaskRepository implements ITaskRepository {
   async create(task: Task): Promise<Task> {
@@ -63,6 +63,70 @@ export class PrismaTaskRepository implements ITaskRepository {
   async delete(id: string): Promise<void> {
     // Soft delete: set deletedAt timestamp to preserve history
     await prisma.tareas.update({ where: { id }, data: { deletedAt: new Date() } });
+  }
+
+  async findCalendarTasks(params: {
+    userId: string;
+    startDate: Date;
+    endDate: Date;
+    filterType: 'all' | 'creado' | 'asignado';
+  }): Promise<TaskWithProject[]> {
+    const { userId, startDate, endDate, filterType } = params;
+
+    // Build user-specific filter based on filterType
+    const userFilter = filterType === 'creado'
+      ? { reportedById: userId }
+      : filterType === 'asignado'
+      ? { assignedToId: userId }
+      : {};
+
+    const tasks = await prisma.tareas.findMany({
+      where: {
+        // Date range filter
+        dueDate: {
+          gte: startDate,
+          lte: endDate,
+        },
+        // Exclude soft-deleted tasks
+        deletedAt: null,
+        // User-specific filter
+        ...userFilter,
+        // Project access filter: user is member OR creator
+        projects: {
+          OR: [
+            { createdById: userId },
+            {
+              members: {
+                some: { userId: userId }
+              }
+            }
+          ]
+        }
+      },
+      include: {
+        projects: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            status: true,
+          }
+        }
+      },
+      orderBy: {
+        dueDate: 'asc'
+      }
+    });
+
+    return tasks.map((task) => ({
+      task: this.toDomain(task),
+      project: {
+        id: task.projects.id,
+        name: task.projects.name,
+        code: task.projects.code,
+        status: task.projects.status,
+      }
+    }));
   }
 
   private toDomain(prismaTask: any): Task {
